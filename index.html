@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>来院チェックイン</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+      background-color: #e6f4f9;
+    }
+    h2 {
+      font-size: 2.5em;
+      margin-bottom: 30px;
+      color: #005a8d;
+    }
+    button {
+      font-size: 2em;
+      padding: 25px 60px;
+      background-color: #4ea9dc;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #3a91c5;
+    }
+    #reader {
+      width: 100%;
+      max-width: 550px;
+      margin: auto;
+      border: 3px solid #87cdee;
+      border-radius: 10px;
+    }
+    #status {
+      font-size: 1.5em;
+      margin-top: 30px;
+      color: #333;
+      white-space: pre-line;
+    }
+    #qr-section {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="welcome">
+    <h2>来院されましたら、下のボタンを押してください</h2>
+    <button onclick="startCheckIn()">チェックイン</button>
+  </div>
+
+  <div id="qr-section">
+    <h2>診察券のQRコードをかざしてください</h2>
+    <div id="reader"></div>
+    <p id="status"></p>
+    <audio id="audio" preload="auto">
+      <source src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Windows_Message_Beep.ogg" type="audio/ogg">
+    </audio>
+  </div>
+
+  <script>
+    const statusElem = document.getElementById("status");
+    const audio = document.getElementById("audio");
+    const readerId = "reader";
+    let scanReady = false;
+    let scanner = null;
+
+    function isValidCardNumber(text) {
+      return /^\d{1,6}$/.test(text);  // 1〜6桁の数字を許可
+    }
+
+    function startScanner() {
+      scanReady = false;
+      setTimeout(() => { scanReady = true; }, 3000);
+
+      scanner = new Html5Qrcode(readerId);
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 320, height: 320 } },
+        (decodedText) => {
+          if (!scanReady || !isValidCardNumber(decodedText)) return;
+
+          scanner.stop().then(() => {
+            scanner.clear();
+            fetch("https://script.google.com/macros/s/AKfycbzcXzHK7Nv0k3HGtWDxDugJMNJh6Qbk_r9ykudBQglXSm85fwbajkl8JrkXhri0wLZa/exec", {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: "card_number=" + encodeURIComponent(decodedText)
+            });
+
+            statusElem.innerText = "読み取り成功しました。\n診察券を診察券入れの中に入れて、\n受付でお座りになってお待ちください。";
+            audio.play();
+
+            setTimeout(() => {
+              statusElem.innerText = "";
+              document.getElementById("qr-section").style.display = "none";
+              document.getElementById("welcome").style.display = "block";
+            }, 8000);
+          });
+        },
+        (errorMessage) => { }
+      ).catch(err => {
+        statusElem.innerText = "カメラの起動に失敗しました: " + err;
+      });
+    }
+
+    function startCheckIn() {
+      document.getElementById("welcome").style.display = "none";
+      document.getElementById("qr-section").style.display = "block";
+      startScanner();
+    }
+  </script>
+</body>
+</html>
