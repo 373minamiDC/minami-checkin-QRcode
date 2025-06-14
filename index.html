@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>診察券チェックイン</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f2f8f7;
+      text-align: center;
+      padding: 80px 20px;
+    }
+    #input-section, #complete-section {
+      display: none;
+    }
+    #input-section.active, #complete-section.active {
+      display: block;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #00695c;
+      margin-bottom: 40px;
+    }
+    input[type="text"] {
+      font-size: 2em;
+      padding: 12px;
+      width: 300px;
+      text-align: center;
+    }
+    #message {
+      font-size: 1.8em;
+      color: #333;
+      margin-top: 30px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <div id="input-section" class="active">
+    <h1>診察券のQRコードをかざしてください</h1>
+    <input type="text" id="cardInput" autofocus>
+  </div>
+
+  <div id="complete-section">
+    <h1 id="message">✅ 受付完了しました<br>診察券を入れておかけになってお待ちください</h1>
+  </div>
+
+  <script>
+    const inputSection = document.getElementById("input-section");
+    const completeSection = document.getElementById("complete-section");
+    const input = document.getElementById("cardInput");
+
+    let lastInput = "";
+
+    input.focus();
+
+    input.addEventListener("input", function () {
+      const cardNumber = input.value.trim();
+      if (/^\d{1,6}$/.test(cardNumber) && cardNumber !== lastInput) {
+        lastInput = cardNumber;
+        sendToGAS(cardNumber);
+      }
+    });
+
+    function sendToGAS(cardNumber) {
+      inputSection.classList.remove("active");
+      completeSection.classList.add("active");
+
+      fetch("https://script.google.com/macros/s/AKfycbzQaVZII-GtdIXE7Eva9A8xzmDOmOKVoPR6gI5dJkxAbnlcrV0hxkiJapxYSyWcu7V5/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "cardNumber=" + encodeURIComponent(cardNumber)
+      }).then(() => {
+        console.log("✅ POST送信成功:", cardNumber);
+      }).catch((error) => {
+        console.error("❌ POST送信エラー:", error);
+        alert("送信エラーが発生しました。");
+      });
+
+      setTimeout(() => {
+        input.value = "";
+        lastInput = "";
+        completeSection.classList.remove("active");
+        inputSection.classList.add("active");
+        input.focus();
+      }, 8000);
+    }
+  </script>
+</body>
+</html>
